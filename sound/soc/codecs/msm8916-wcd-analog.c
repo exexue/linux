@@ -175,6 +175,7 @@
 #define CDC_A_MBHC_FSM_CTL_BTN_ISRC_CTRL_MASK		GENMASK(6, 4)
 #define CDC_A_MBHC_DBNC_TIMER		(0xf152)
 #define CDC_A_MBHC_DBNC_TIMER_BTN_DBNC_T_16MS		BIT(3)
+#define CDC_A_MBHC_DBNC_TIMER_INSREM_DBNC_T_96_MS	(0x6 << 4)
 #define CDC_A_MBHC_DBNC_TIMER_INSREM_DBNC_T_256_MS	(0x9 << 4)
 #define CDC_A_MBHC_BTN0_ZDET_CTL_0	(0xf153)
 #define CDC_A_MBHC_BTN1_ZDET_CTL_1	(0xf154)
@@ -496,7 +497,19 @@ static void pm8916_wcd_setup_mbhc(struct pm8916_wcd_analog_priv *wcd)
 	u32 plug_type = 0;
 	u32 int_en_mask = 0;
 
-	snd_soc_component_write(component, CDC_A_MBHC_DET_CTL_1,
+	/*
+	 * Program only bits 7:3 and preserve the power-on-reset value of the
+	 * undocumented bits 1:0 (POR 0x35, bit 0 set). A full write that
+	 * clears bit 0 disables mechanical removal detection on a
+	 * normally-open jack; downstream msm-analog-cdc only ever touches
+	 * bits 7:3 here.
+	 */
+	snd_soc_component_update_bits(component, CDC_A_MBHC_DET_CTL_1,
+		      CDC_A_MBHC_DET_CTL_L_DET_EN |
+		      CDC_A_MBHC_DET_CTL_GND_DET_EN |
+		      CDC_A_MBHC_DET_CTL_MECH_DET_TYPE_MASK |
+		      CDC_A_MBHC_DET_CTL_MIC_CLAMP_CTL_MASK |
+		      CDC_A_MBHC_DET_CTL_MBHC_BIAS_EN,
 		      CDC_A_MBHC_DET_CTL_L_DET_EN |
 		      CDC_A_MBHC_DET_CTL_MECH_DET_TYPE_INSERTION |
 		      CDC_A_MBHC_DET_CTL_MIC_CLAMP_CTL_AUTO |
@@ -516,7 +529,7 @@ static void pm8916_wcd_setup_mbhc(struct pm8916_wcd_analog_priv *wcd)
 
 
 	snd_soc_component_write(component, CDC_A_MBHC_DBNC_TIMER,
-		      CDC_A_MBHC_DBNC_TIMER_INSREM_DBNC_T_256_MS |
+		      CDC_A_MBHC_DBNC_TIMER_INSREM_DBNC_T_96_MS |
 		      CDC_A_MBHC_DBNC_TIMER_BTN_DBNC_T_16MS);
 
 	/* enable MBHC clock */
