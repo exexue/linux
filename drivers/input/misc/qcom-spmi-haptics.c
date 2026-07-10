@@ -39,6 +39,16 @@
 #define HAP_EN_CTL2_REG			0x48
 #define BRAKE_EN_BIT			BIT(0)
 
+#define HAP_EN_CTL3_REG			0x4A
+#define HAP_HBRIDGE_EN_BIT		BIT(7)
+#define HAP_PWM_SIGNAL_EN_BIT		BIT(6)
+#define HAP_ILIM_EN_BIT			BIT(5)
+#define HAP_ILIM_CC_EN_BIT		BIT(4)
+#define HAP_AUTO_RES_RBIAS_EN_BIT	BIT(3)
+#define HAP_DAC_EN_BIT			BIT(2)
+#define HAP_ZX_HYST_EN_BIT		BIT(1)
+#define HAP_PWM_CTL_EN_BIT		BIT(0)
+
 #define HAP_AUTO_RES_CTRL_REG		0x4B
 #define AUTO_RES_EN_BIT			BIT(7)
 #define AUTO_RES_ERR_RECOVERY_BIT	BIT(3)
@@ -572,9 +582,29 @@ static int spmi_haptics_init(struct spmi_haptics *haptics)
 	if (ret < 0)
 		return ret;
 
-	// Configure the debounce for short-circuit detection.
+	/*
+	 * Enable the output stage (H-bridge, DAC, current limiter, PWM
+	 * generator). The power-on default leaves it disabled, and not every
+	 * bootloader initialises the haptics block, in which case PLAY/EN
+	 * writes succeed but the motor never moves.
+	 */
+	val = HAP_HBRIDGE_EN_BIT | HAP_PWM_SIGNAL_EN_BIT | HAP_ILIM_EN_BIT |
+	      HAP_ILIM_CC_EN_BIT | HAP_AUTO_RES_RBIAS_EN_BIT | HAP_DAC_EN_BIT |
+	      HAP_PWM_CTL_EN_BIT;
+	ret = spmi_haptics_write(haptics, haptics->base + HAP_EN_CTL3_REG, &val, 1);
+	if (ret < 0)
+		return ret;
+
+	/*
+	 * Configure the debounce for short-circuit detection.
+	 * The register field is an exponent (cycles = 8 << (val - 1), 0 =
+	 * no debounce); writing the raw cycle count 32 through the 3-bit
+	 * mask ended up as 0, i.e. no debounce at all. Encode it properly
+	 * (32 cycles -> 3), matching downstream qpnp_haptics_sc_deb_config().
+	 */
 	ret = spmi_haptics_write_masked(haptics, haptics->base + HAP_SC_DEB_REG,
-			HAP_SC_DEB_MASK, HAP_SC_DEB_CYCLES_MAX);
+			HAP_SC_DEB_MASK,
+			ilog2(HAP_SC_DEB_CYCLES_MAX / HAP_DEF_SC_DEB_CYCLES) + 1);
 	if (ret < 0)
 		return ret;
 
@@ -782,7 +812,8 @@ static int spmi_haptics_play_effect(struct input_dev *dev, void *data,
 
 	atomic_set(&haptics->active, 1);
 
-	vmax_mv = ((haptics->vmax - HAP_VMAX_MIN_MV) * haptics->magnitude) / 100 +
+	/* magnitude is 0-255 (strong_magnitude >> 8), not a percentage */
+	vmax_mv = ((haptics->vmax - HAP_VMAX_MIN_MV) * haptics->magnitude) / 255 +
 					HAP_VMAX_MIN_MV;
 
 	dev_dbg(haptics->dev, "%s: magnitude: %d, vmax: %d", __func__,
@@ -918,6 +949,8 @@ static int spmi_haptics_probe(struct platform_device *pdev)
 
 	for (i = 0; i < HAP_WAVE_SAMP_LEN; i++)
 		haptics->wave_samp[i] = HAP_WF_SAMP_MAX;
+
+	mutex_init(&haptics->play_lock);
 
 	ret = spmi_haptics_init(haptics);
 	if (ret < 0) {
