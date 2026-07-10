@@ -521,6 +521,13 @@ static const struct snd_kcontrol_new msm8916_wcd_digital_snd_controls[] = {
 	SOC_ENUM("TX2 HPF Cutoff", tx2_hpf_cutoff_enum),
 	SOC_SINGLE("TX1 HPF Switch", LPASS_CDC_TX1_MUX_CTL, 3, 1, 0),
 	SOC_SINGLE("TX2 HPF Switch", LPASS_CDC_TX2_MUX_CTL, 3, 1, 0),
+	/*
+	 * Hardware TX (decimator) mute, needed for in-call mic mute: the DSP
+	 * voice uplink never passes through a userspace PCM, so a userspace
+	 * soft mute cannot silence it. Inverted: switch on = capture unmuted.
+	 */
+	SOC_SINGLE("TX1 Capture Switch", LPASS_CDC_TX1_VOL_CTL_CFG, 0, 1, 1),
+	SOC_SINGLE("TX2 Capture Switch", LPASS_CDC_TX2_VOL_CTL_CFG, 0, 1, 1),
 	SOC_ENUM("RX1 DCB Cutoff", rx1_dcb_cutoff_enum),
 	SOC_ENUM("RX2 DCB Cutoff", rx2_dcb_cutoff_enum),
 	SOC_ENUM("RX3 DCB Cutoff", rx3_dcb_cutoff_enum),
