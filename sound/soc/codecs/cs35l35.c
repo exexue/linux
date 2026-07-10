@@ -743,7 +743,7 @@ static int cs35l35_component_set_sysclk(struct snd_soc_component *component,
 		break;
 	default:
 		dev_err(component->dev, "Invalid CLK Frequency Input : %d\n", freq);
-		return -EINVAL;
+		return -ENOTSUPP;
 	}
 
 	ret = regmap_update_bits(cs35l35->regmap, CS35L35_CLK_CTL1,
