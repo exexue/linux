@@ -20,6 +20,19 @@ config LEDS_AS3645A
 	  controller. V4L2 flash API is provided as well if
 	  CONFIG_V4L2_FLASH_API is enabled.
 
+config LEDS_AW36413
+	tristate "LED support for the Awinic AW36413"
+	depends on I2C
+	depends on GPIOLIB || COMPILE_TEST
+	select REGMAP_I2C
+	help
+	  This option enables support for the Awinic AW36413 dual-channel
+	  flash LED controller (LM3644 register family), e.g. the two chips
+	  driving the quad-LED rear flash of the Meizu M6 Note.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called leds-aw36413.
+
 config LEDS_KTD2692
 	tristate "LED support for Kinetic KTD2692 flash LED controller"
 	depends on OF
