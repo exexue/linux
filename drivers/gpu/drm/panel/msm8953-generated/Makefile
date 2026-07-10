@@ -7,6 +7,7 @@ obj-$(CONFIG_DRM_PANEL_ASUS_ZE552KL_R63350_TM) += panel-asus-ze552kl-r63350-tm.o
 obj-$(CONFIG_DRM_PANEL_BILLION_RIMOB_NT35532_CS) += panel-billion-rimob-nt35532-cs.o
 obj-$(CONFIG_DRM_PANEL_BOE_BS052FHM_A00_6C01) += panel-boe-bs052fhm-a00-6c01.o
 obj-$(CONFIG_DRM_PANEL_HIMAX_HX8399C_FHDPLUS) += panel-himax-hx8399c-fhdplus.o
+obj-$(CONFIG_DRM_PANEL_MEIZU_M1721_HX8399C_TCL) += panel-meizu-m1721-hx8399c-tcl.o
 obj-$(CONFIG_DRM_PANEL_HUAWEI_MILAN_BOE_OTM1906C) += panel-huawei-milan-boe-otm1906c.o
 obj-$(CONFIG_DRM_PANEL_HUAWEI_MILAN_BOE_TD4322) += panel-huawei-milan-boe-td4322.o
 obj-$(CONFIG_DRM_PANEL_HUAWEI_MILAN_BOE_TEST1906C) += panel-huawei-milan-boe-test1906c.o

@@ -5,6 +5,10 @@ menu "MSM8953 panel drivers generated with linux-mdss-dsi-panel-driver-generator
 config DRM_PANEL_MSM8953_GENERATED
 	tristate "Select all generated MSM8953 panel drivers by default"
 
+config DRM_PANEL_MEIZU_M1721_HX8399C_TCL
+	tristate "Meizu M6 Note (m1721) Himax HX8399C TCL 1080p"
+	default DRM_PANEL_MSM8953_GENERATED
+
 config DRM_PANEL_ASUS_ZE520KL_ILI7807B_BOE
 	tristate "Asus ZE520KL ILI7807B BOE"
 	default DRM_PANEL_MSM8953_GENERATED
