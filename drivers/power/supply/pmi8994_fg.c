@@ -624,9 +624,17 @@ static int pmi8994_fg_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-		/* Get status from charger if available */
-		if (chip->chg_psy && chip->status != POWER_SUPPLY_STATUS_UNKNOWN) {
-			val->intval = chip->status;
+		/*
+		 * Get status from the charger if available. Read it live: the
+		 * cached chip->status can stay UNKNOWN when the charger never
+		 * emits a power_supply_changed event after probe, which makes
+		 * the current-based fallback report Discharging even while a
+		 * charger is plugged in.
+		 */
+		if (chip->chg_psy &&
+		    !power_supply_get_property(chip->chg_psy,
+					      POWER_SUPPLY_PROP_STATUS, val)) {
+			/* val->intval already set from the charger */
 		} else {
 			/*
 			 * Fall back to capacity and current-based
