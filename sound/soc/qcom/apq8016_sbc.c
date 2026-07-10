@@ -46,6 +46,19 @@ struct apq8016_sbc_data {
 #define SPKR_CTL_TLMM_WS_EN_SEL_SEC	BIT(18)
 #define DEFAULT_MCLK_RATE		9600000
 #define MI2S_BCLK_RATE			1536000
+/*
+ * The Cirrus CS35L35 boosted speaker amp needs a dedicated 12.288 MHz LPASS
+ * MCLK (MCLK_2) as its PLL reference; 12.288 MHz is a valid CS35L35 sysclk,
+ * the shared 9.6 MHz DEFAULT_MCLK_RATE (the WCD's) is not.
+ */
+#define CS35L35_MCLK_RATE		12288000
+/*
+ * Extra csr_gp_io_mux_mic_ctl bit that puts the Quaternary MI2S in I2S
+ * master mode (LPASS generates SCLK/WS); with the two bits below this
+ * gives the 0x02020002 value the downstream kernel writes for the amp
+ * pad group.
+ */
+#define MIC_CTRL_QUA_MI2S_MASTER	BIT(25)
 
 static struct snd_soc_jack_pin apq8016_sbc_jack_pins[] = {
 	{
@@ -78,6 +91,15 @@ static int apq8016_dai_init(struct snd_soc_pcm_runtime *rtd, int mi2s)
 		writel(readl(pdata->mic_iomux) | MIC_CTRL_QUA_WS_SLAVE_SEL_10 |
 			MIC_CTRL_TLMM_SCLK_EN,
 			pdata->mic_iomux);
+		/*
+		 * A speaker amp on the Quaternary MI2S controller routed onto
+		 * the sec_mi2s pads needs the LPASS in I2S master mode on this
+		 * pad group. Gated on use_ibit_clk so only msm8953-qdsp6
+		 * boards are affected.
+		 */
+		if (pdata->use_ibit_clk)
+			writel(readl(pdata->mic_iomux) | MIC_CTRL_QUA_MI2S_MASTER,
+			       pdata->mic_iomux);
 		break;
 	case MI2S_SECONDARY:
 		/* Clear TLMM_WS_OUT_SEL and TLMM_WS_EN_SEL fields */
@@ -252,6 +274,32 @@ static int msm8916_qdsp6_startup(struct snd_pcm_substream *substream)
 	ret = snd_soc_dai_set_sysclk(cpu_dai, qdsp6_get_bit_clk_id(data, mi2s), MI2S_BCLK_RATE, 0);
 	if (ret)
 		dev_err(card->dev, "Failed to enable LPAIF bit clk: %d\n", ret);
+
+	/*
+	 * The CS35L35 speaker amp on the Quaternary MI2S link additionally
+	 * needs a free-running 12.288 MHz MCLK_2 as its PLL reference, an I2S
+	 * codec-DAI format, and the SCLK/sysclk rates handed to the codec.
+	 * Gated on use_ibit_clk + MI2S_QUATERNARY so other apq8016/msm8916
+	 * boards are untouched.
+	 */
+	if (data->use_ibit_clk && mi2s == MI2S_QUATERNARY) {
+		int mret, i;
+
+		mret = snd_soc_dai_set_sysclk(cpu_dai, Q6AFE_LPASS_CLK_ID_MCLK_2,
+					      CS35L35_MCLK_RATE, 0);
+		if (mret)
+			dev_err(card->dev, "Failed to enable QUAT MCLK_2: %d\n", mret);
+
+		for_each_rtd_codec_dais(rtd, i, codec_dai) {
+			snd_soc_dai_set_fmt(codec_dai,
+					    SND_SOC_DAIFMT_BC_FC | SND_SOC_DAIFMT_I2S);
+			snd_soc_dai_set_sysclk(codec_dai, 0, MI2S_BCLK_RATE, 0);
+			snd_soc_component_set_sysclk(codec_dai->component, 0, 0,
+						     CS35L35_MCLK_RATE,
+						     SND_SOC_CLOCK_IN);
+		}
+	}
+
 	return ret;
 }
 
@@ -273,6 +321,13 @@ static void msm8916_qdsp6_shutdown(struct snd_pcm_substream *substream)
 	ret = snd_soc_dai_set_sysclk(cpu_dai, qdsp6_get_bit_clk_id(data, mi2s), 0, 0);
 	if (ret)
 		dev_err(card->dev, "Failed to disable LPAIF bit clk: %d\n", ret);
+
+	/* Release the CS35L35's 12.288 MHz MCLK_2 on the Quaternary MI2S link. */
+	if (data->use_ibit_clk && mi2s == MI2S_QUATERNARY) {
+		ret = snd_soc_dai_set_sysclk(cpu_dai, Q6AFE_LPASS_CLK_ID_MCLK_2, 0, 0);
+		if (ret)
+			dev_err(card->dev, "Failed to disable QUAT MCLK_2: %d\n", ret);
+	}
 }
 
 static const struct snd_soc_ops msm8916_qdsp6_be_ops = {
