@@ -88,6 +88,46 @@ cvp_err:
 	return ret;
 }
 
+/*
+ * The CVP session is bound to the AFE ports that p->tx_port/p->rx_port held
+ * when q6voice_path_start() created it (CVP has no "set device" command in
+ * this driver, only CREATE_FULL_CONTROL_SESSION_V2). To make an in-call
+ * device switch (e.g. earpiece -> speakerphone) take effect on the DSP, tear
+ * down the running CVP leg and bring the path back up so a new CVP session
+ * is created with the current ports. The MVM session is kept.
+ */
+static int q6voice_path_switch_port(struct q6voice_path *p)
+{
+	struct device *dev = p->v->dev;
+	struct q6voice_session *mvm = p->runtime->sessions[Q6VOICE_SERVICE_MVM];
+	struct q6voice_session *cvp = p->runtime->sessions[Q6VOICE_SERVICE_CVP];
+	int ret;
+
+	dev_dbg(dev, "switch path %d to tx port %d, rx port %d\n",
+		p->type, p->tx_port, p->rx_port);
+
+	ret = q6mvm_start(mvm, false);
+	if (ret)
+		dev_err(dev, "failed to stop voice: %d\n", ret);
+
+	ret = q6mvm_attach(mvm, cvp, false);
+	if (ret)
+		dev_err(dev, "failed to detach cvp from mvm: %d\n", ret);
+
+	ret = q6cvp_enable(cvp, false);
+	if (ret)
+		dev_err(dev, "failed to disable cvp: %d\n", ret);
+
+	q6voice_session_release(cvp);
+	p->runtime->sessions[Q6VOICE_SERVICE_CVP] = NULL;
+
+	ret = q6voice_path_start(p);
+	if (ret)
+		dev_err(dev, "failed to restart path %d on new ports: %d\n",
+			p->type, ret);
+	return ret;
+}
+
 int q6voice_start(struct q6voice *v, enum q6voice_path_type path, bool capture)
 {
 	struct q6voice_path *p = &v->paths[path];
@@ -252,11 +292,27 @@ void q6voice_set_port(struct q6voice *v, enum q6voice_path_type path,
 		      bool capture, int index)
 {
 	struct q6voice_path *p = &v->paths[path];
+	int *port = capture ? &p->tx_port : &p->rx_port;
 
-	if (capture)
-		p->tx_port = index;
-	else
-		p->rx_port = index;
+	mutex_lock(&p->lock);
+	if (*port == index)
+		goto out;
+
+	*port = index;
+
+	/*
+	 * If the path is already running, the routing mixer was flipped in
+	 * the middle of a call: re-create the CVP session so the vocoder
+	 * actually moves to the new AFE port. Clearing a port (index 0, the
+	 * old mixer switching off) is not a device switch - keep the running
+	 * session until a new port is set.
+	 */
+	if (index > 0 && p->runtime && p->runtime->started == 3 &&
+	    p->tx_port > 0 && p->rx_port > 0)
+		q6voice_path_switch_port(p);
+
+out:
+	mutex_unlock(&p->lock);
 }
 EXPORT_SYMBOL_GPL(q6voice_set_port);
 
