@@ -1,0 +1,36 @@
+name: Build MSM8953 Kernel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ meizu-m1721 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: meizu-m1721
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu build-essential flex bison libssl-dev libncurses-dev bc python3
+
+      - name: Copy kernel config
+        run: |
+          cp .config arch/arm64/configs/msm8953_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- msm8953_defconfig
+
+      - name: Compile kernel
+        run: make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image.gz dtbs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-artifacts
+          path: |
+            arch/arm64/boot/Image.gz
+            arch/arm64/boot/dts/qcom/msm8953-meizu-m1721.dtb
