@@ -24,13 +24,28 @@ jobs:
           cp .config arch/arm64/configs/msm8953_defconfig
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- msm8953_defconfig
 
-      - name: Compile kernel
-        run: make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image.gz dtbs
+      - name: Compile kernel, dtbs and modules
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image.gz dtbs modules
 
-      - name: Upload artifact
+      - name: Prepare module directory
+        run: |
+          mkdir -p artifacts/modules
+          # 只拷贝 wcn36xx 驱动目录下的所有 .ko 文件
+          find drivers/net/wireless/ath/wcn36xx -name "*.ko" -exec cp {} artifacts/modules/ \;
+          echo "=== 编译出的模块 ==="
+          ls -lh artifacts/modules/
+
+      - name: Upload kernel image and dtb
         uses: actions/upload-artifact@v4
         with:
           name: kernel-artifacts
           path: |
             arch/arm64/boot/Image.gz
             arch/arm64/boot/dts/qcom/msm8953-meizu-m1721.dtb
+
+      - name: Upload WiFi module (wcn36xx.ko)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wifi-module
+          path: artifacts/modules/*.ko
