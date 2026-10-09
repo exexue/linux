@@ -21,6 +21,7 @@
 #include <linux/firmware.h>
 #include <linux/bitops.h>
 #include <linux/rpmsg.h>
+#include <linux/of.h>
 #include "smd.h"
 #include "firmware.h"
 
@@ -28,14 +29,22 @@ struct wcn36xx_cfg_val {
 	u32 cfg_id;
 	u32 value;
 };
+static bool disable_vht;
+module_param(disable_vht, bool, 0644);
+MODULE_PARM_DESC(disable_vht,
+		 "Use no-VHT CONFIG_STA and CONFIG_BSS firmware request layouts");
 
+static bool wcn36xx_use_no_vht_layout(void)
+{
+	return disable_vht || of_machine_is_compatible("meizu,m1721");
+}
 #define WCN36XX_CFG_VAL(id, val) \
 { \
 	.cfg_id = WCN36XX_HAL_CFG_ ## id, \
 	.value = val \
 }
 
-static struct wcn36xx_cfg_val wcn36xx_cfg_vals[] = {
+static  wcn36xx_cfg_vals[] = {
 	WCN36XX_CFG_VAL(CURRENT_TX_ANTENNA, 1),
 	WCN36XX_CFG_VAL(CURRENT_RX_ANTENNA, 1),
 	WCN36XX_CFG_VAL(LOW_GAIN_OVERRIDE, 0),
@@ -83,7 +92,7 @@ static struct wcn36xx_cfg_val wcn36xx_cfg_vals[] = {
 	WCN36XX_CFG_VAL(LINK_FAIL_TX_CNT, 1000),
 };
 
-static struct wcn36xx_cfg_val wcn3680_cfg_vals[] = {
+static  wcn3680_cfg_vals[] = {
 	WCN36XX_CFG_VAL(CURRENT_TX_ANTENNA, 1),
 	WCN36XX_CFG_VAL(CURRENT_RX_ANTENNA, 1),
 	WCN36XX_CFG_VAL(LOW_GAIN_OVERRIDE, 0),
@@ -616,7 +625,7 @@ int wcn36xx_smd_start(struct wcn36xx *wcn)
 	int i;
 	size_t len;
 	int cfg_elements;
-	static struct wcn36xx_cfg_val *cfg_vals;
+	static  *cfg_vals;
 
 	mutex_lock(&wcn->hal_mutex);
 	INIT_HAL_MSG(msg_body, WCN36XX_HAL_START_REQ);
@@ -1449,7 +1458,7 @@ static int wcn36xx_smd_config_sta_v1(struct wcn36xx *wcn,
 	struct wcn36xx_hal_config_sta_req_msg_v1 msg_body;
 	struct wcn36xx_hal_config_sta_params_v1 *sta_params;
 
-	if (wcn->rf_id == RF_IRIS_WCN3680) {
+	if (wcn->rf_id == RF_IRIS_WCN3680 && !wcn36xx_use_no_vht_layout()) {
 		INIT_HAL_MSG_V1(msg_body, WCN36XX_HAL_CONFIG_STA_REQ);
 	} else {
 		INIT_HAL_MSG(msg_body, WCN36XX_HAL_CONFIG_STA_REQ);
@@ -1628,7 +1637,7 @@ static int wcn36xx_smd_config_bss_v1(struct wcn36xx *wcn,
 	if (!msg_body)
 		return -ENOMEM;
 
-	if (wcn->rf_id == RF_IRIS_WCN3680) {
+	if (wcn->rf_id == RF_IRIS_WCN3680 && !wcn36xx_use_no_vht_layout()) {
 		INIT_HAL_MSG_V1((*msg_body), WCN36XX_HAL_CONFIG_BSS_REQ);
 	} else {
 		INIT_HAL_MSG((*msg_body), WCN36XX_HAL_CONFIG_BSS_REQ);
