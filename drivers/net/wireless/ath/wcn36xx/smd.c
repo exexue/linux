@@ -21,6 +21,7 @@
 #include <linux/firmware.h>
 #include <linux/bitops.h>
 #include <linux/rpmsg.h>
+#include <linux/of.h>
 #include "smd.h"
 #include "firmware.h"
 
@@ -28,7 +29,15 @@ struct wcn36xx_cfg_val {
 	u32 cfg_id;
 	u32 value;
 };
+static bool disable_vht;
+module_param(disable_vht, bool, 0644);
+MODULE_PARM_DESC(disable_vht,
+		 "Use no-VHT CONFIG_STA and CONFIG_BSS firmware request layouts");
 
+static bool wcn36xx_use_no_vht_layout(void)
+{
+	return disable_vht || of_machine_is_compatible("meizu,m1721");
+}
 #define WCN36XX_CFG_VAL(id, val) \
 { \
 	.cfg_id = WCN36XX_HAL_CFG_ ## id, \
@@ -847,7 +856,7 @@ int wcn36xx_smd_start_hw_scan(struct wcn36xx *wcn, struct ieee80211_vif *vif,
 		return -EINVAL;
 
 	mutex_lock(&wcn->hal_mutex);
-	msg_body = kzalloc_obj(*msg_body);
+	msg_body = kzalloc(sizeof(*msg_body), GFP_KERNEL);
 	if (!msg_body) {
 		ret = -ENOMEM;
 		goto out;
@@ -942,7 +951,7 @@ int wcn36xx_smd_update_channel_list(struct wcn36xx *wcn, struct cfg80211_scan_re
 	struct wcn36xx_hal_update_channel_list_req_msg *msg_body;
 	int ret, i;
 
-	msg_body = kzalloc_obj(*msg_body);
+	msg_body = kzalloc(sizeof(*msg_body), GFP_KERNEL);
 	if (!msg_body)
 		return -ENOMEM;
 
@@ -1449,7 +1458,7 @@ static int wcn36xx_smd_config_sta_v1(struct wcn36xx *wcn,
 	struct wcn36xx_hal_config_sta_req_msg_v1 msg_body;
 	struct wcn36xx_hal_config_sta_params_v1 *sta_params;
 
-	if (wcn->rf_id == RF_IRIS_WCN3680) {
+	if (wcn->rf_id == RF_IRIS_WCN3680 && !wcn36xx_use_no_vht_layout()) {
 		INIT_HAL_MSG_V1(msg_body, WCN36XX_HAL_CONFIG_STA_REQ);
 	} else {
 		INIT_HAL_MSG(msg_body, WCN36XX_HAL_CONFIG_STA_REQ);
@@ -1624,11 +1633,11 @@ static int wcn36xx_smd_config_bss_v1(struct wcn36xx *wcn,
 	struct cfg80211_chan_def *chandef;
 	int ret;
 
-	msg_body = kzalloc_obj(*msg_body);
+	msg_body = kzalloc(sizeof(*msg_body), GFP_KERNEL);
 	if (!msg_body)
 		return -ENOMEM;
 
-	if (wcn->rf_id == RF_IRIS_WCN3680) {
+	if (wcn->rf_id == RF_IRIS_WCN3680 && !wcn36xx_use_no_vht_layout()) {
 		INIT_HAL_MSG_V1((*msg_body), WCN36XX_HAL_CONFIG_BSS_REQ);
 	} else {
 		INIT_HAL_MSG((*msg_body), WCN36XX_HAL_CONFIG_BSS_REQ);
@@ -1744,7 +1753,7 @@ static int wcn36xx_smd_config_bss_v0(struct wcn36xx *wcn,
 	struct wcn36xx_hal_config_sta_params *sta_params;
 	int ret;
 
-	msg = kzalloc_obj(*msg);
+	msg = kzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg)
 		return -ENOMEM;
 
@@ -2654,7 +2663,7 @@ static int wcn36xx_smd_tx_compl_ind(struct wcn36xx *wcn, void *buf, size_t len)
 {
 	struct wcn36xx_hal_tx_compl_ind_msg *rsp = buf;
 
-	if (len < sizeof(*rsp)) {
+	if (len != sizeof(*rsp)) {
 		wcn36xx_warn("Bad TX complete indication\n");
 		return -EIO;
 	}
@@ -3306,7 +3315,7 @@ int wcn36xx_smd_rsp_process(struct rpmsg_device *rpdev,
 	case WCN36XX_HAL_DELETE_STA_CONTEXT_IND:
 	case WCN36XX_HAL_PRINT_REG_INFO_IND:
 	case WCN36XX_HAL_SCAN_OFFLOAD_IND:
-		msg_ind = kmalloc_flex(*msg_ind, msg, len, GFP_ATOMIC);
+		msg_ind = kmalloc(struct_size(msg_ind, msg, len), GFP_ATOMIC);
 		if (!msg_ind) {
 			wcn36xx_err("Run out of memory while handling SMD_EVENT (%d)\n",
 				    msg_header->msg_type);
