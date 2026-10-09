@@ -26,6 +26,8 @@ jobs:
           cp .config arch/arm64/configs/msm8953_defconfig
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- msm8953_defconfig
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          echo "===== 最终内核配置检查（重点看 WCN36XX）====="
+          grep -E "CONFIG_WCN36XX=|CONFIG_CFG80211=|CONFIG_MAC80211=|CONFIG_RFKILL=|CONFIG_WLAN_VENDOR_ATH=" .config
 
       - name: Build kernel and deb packages
         env:
@@ -39,7 +41,14 @@ jobs:
       - name: List generated deb files
         run: |
           echo "=== 生成的 deb 包 ==="
-          ls -lh ../*.deb
+          ls -lh ../*.deb || true
+
+      - name: Move deb packages into workspace
+        run: |
+          mkdir -p deb-packages
+          cp ../*.deb deb-packages/ || true
+          echo "=== 已复制到 workspace 的 deb 包 ==="
+          ls -lh deb-packages/
 
       - name: Upload kernel image and dtb
         uses: actions/upload-artifact@v4
@@ -53,4 +62,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kernel-deb
-          path: ../*.deb
+          path: deb-packages/*.deb
