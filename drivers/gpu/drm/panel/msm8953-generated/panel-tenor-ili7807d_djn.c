@@ -610,15 +610,15 @@ static int ili7807d_djn_53_unprepare(struct drm_panel *panel)
 }
 
 static const struct drm_display_mode ili7807d_djn_53_mode = {
-	.clock = (1080 + 344 + 16 + 24) * (1920 + 8 + 6 + 6) * 60 / 1000,
+	.clock = (1080 + 80 + 28 + 88) * (1920 + 24 + 8 + 16) * 60 / 1000,
 	.hdisplay = 1080,
-	.hsync_start = 1080 + 344,
-	.hsync_end = 1080 + 344 + 16,
-	.htotal = 1080 + 344 + 16 + 24,
+	.hsync_start = 1080 + 80,
+	.hsync_end = 1080 + 80 + 28,
+	.htotal = 1080 + 80 + 28 + 88,
 	.vdisplay = 1920,
-	.vsync_start = 1920 + 8,
-	.vsync_end = 1920 + 8 + 6,
-	.vtotal = 1920 + 8 + 6 + 6,
+	.vsync_start = 1920 + 24,
+	.vsync_end = 1920 + 24 + 8,
+	.vtotal = 1920 + 24 + 8 + 16,
 	.width_mm = 0,
 	.height_mm = 0,
 	.type = DRM_MODE_TYPE_DRIVER,
@@ -699,7 +699,7 @@ static void ili7807d_djn_53_remove(struct mipi_dsi_device *dsi)
 }
 
 static const struct of_device_id ili7807d_djn_53_of_match[] = {
-	{ .compatible = "tenor,ili7807d_djn" }, // FIXME
+	{ .compatible = "meizu,m1721-ili7807d-djn" }, // FIXME
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, ili7807d_djn_53_of_match);
