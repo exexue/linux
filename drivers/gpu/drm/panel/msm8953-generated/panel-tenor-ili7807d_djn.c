@@ -628,7 +628,20 @@ static const struct drm_display_mode ili7807d_djn_53_mode = {
 static int ili7807d_djn_53_get_modes(struct drm_panel *panel,
 				     struct drm_connector *connector)
 {
-	return drm_connector_helper_get_modes_fixed(connector, &ili7807d_djn_53_mode);
+	struct drm_display_mode *mode;
+
+	mode = drm_mode_duplicate(connector->dev, &ili7807d_djn_53_mode);
+	if (!mode)
+		return -ENOMEM;
+
+	drm_mode_set_name(mode);
+
+	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
+	connector->display_info.width_mm = mode->width_mm;
+	connector->display_info.height_mm = mode->height_mm;
+	drm_mode_probed_add(connector, mode);
+
+	return 1;
 }
 
 static const struct drm_panel_funcs ili7807d_djn_53_panel_funcs = {
