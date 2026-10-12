@@ -254,14 +254,14 @@
 };
 
 &mdss {
-	status = "okay";
+	status = "disabled";
 };
 
 &mdss_dsi0 {
 	vdda-supply = <&pm8953_s3>;
 	vddio-supply = <&pm8953_l6>;
 
-	status = "okay";
+	status = "disabled";
 
 	panel@0 {
 		compatible = "meizu,m1721-ili7807d-djn";
@@ -297,10 +297,14 @@
 
 &lab {
 	qcom,soft-start-us = <800>;
+    	regulator-always-on;   // ← 加
+    	regulator-boot-on;     // ← 加
 };
 
 &ibb {
 	qcom,discharge-resistor-kohms = <32>;
+ 	regulator-always-on;   // ← 加
+    	regulator-boot-on;     // ← 加
 };
 
 &pmi8950_fg {
