@@ -266,6 +266,7 @@
 	panel@0 {
 		compatible = "meizu,m1721-ili7807d-djn";
 		reg = <0>;
+		status = "okay";
 
 		backlight = <&pmi8950_wled>;
 
