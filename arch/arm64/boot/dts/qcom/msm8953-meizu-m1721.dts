@@ -263,24 +263,7 @@
 
 	status = "okay";
 
-	panel@0 {
-		compatible = "meizu,m1721-ili7807d-djn";
-		reg = <0>;
-		status = "okay";
 
-		backlight = <&pmi8950_wled>;
-
-		reset-gpios = <&tlmm 61 GPIO_ACTIVE_LOW>;
-
-		vsp-supply = <&lab>;
-		vsn-supply = <&ibb>;
-
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&mdss_dsi0_out>;
-			};
-		};
-	};
 };
 
 &mdss_dsi0_out {
