@@ -264,7 +264,7 @@
 	status = "okay";
 
 	panel@0 {
-		compatible = "meizu,m1721-hx8399c-tcl";
+		compatible = "meizu,m1721-ili7807d-djn";
 		reg = <0>;
 
 		backlight = <&pmi8950_wled>;
