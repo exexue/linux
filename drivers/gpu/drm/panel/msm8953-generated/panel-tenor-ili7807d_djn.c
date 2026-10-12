@@ -34,12 +34,13 @@ struct ili7807d_djn_53 *to_ili7807d_djn_53(struct drm_panel *panel)
 
 static void ili7807d_djn_53_reset(struct ili7807d_djn_53 *ctx)
 {
-	gpiod_set_value_cansleep(ctx->reset_gpio, 0);
-	usleep_range(1000, 2000);
+	/* 原厂复位序列: 高(1ms) -> 低(5ms) -> 高(50ms) */
 	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
-	usleep_range(10000, 11000);
+	usleep_range(1000, 1100);
 	gpiod_set_value_cansleep(ctx->reset_gpio, 0);
-	usleep_range(10000, 11000);
+	usleep_range(5000, 5100);
+	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
+	usleep_range(50000, 51000);
 }
 
 static int ili7807d_djn_53_on(struct ili7807d_djn_53 *ctx)
@@ -619,8 +620,8 @@ static const struct drm_display_mode ili7807d_djn_53_mode = {
 	.vsync_start = 1920 + 24,
 	.vsync_end = 1920 + 24 + 8,
 	.vtotal = 1920 + 24 + 8 + 16,
-	.width_mm = 0,
-	.height_mm = 0,
+	.width_mm = 68,
+	.height_mm = 121,
 	.type = DRM_MODE_TYPE_DRIVER,
 };
 
@@ -667,7 +668,7 @@ static int ili7807d_djn_53_probe(struct mipi_dsi_device *dsi)
 	dsi->format = MIPI_DSI_FMT_RGB888;
 	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
 			  MIPI_DSI_CLOCK_NON_CONTINUOUS |
-			  MIPI_DSI_MODE_VIDEO_NO_HFP | MIPI_DSI_MODE_LPM;
+			  MIPI_DSI_MODE_LPM;
 
 	ctx->panel.prepare_prev_first = true;
 
