@@ -1,6 +1,6 @@
 name: Build MSM8953 Kernel + deb
 
-on:
+on: 
   workflow_dispatch:
   push:
     branches: [ meizu-m1721 ]
