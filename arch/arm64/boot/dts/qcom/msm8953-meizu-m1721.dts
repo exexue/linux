@@ -3,7 +3,7 @@
  * Meizu M6 Note (m1721)
  */
 /dts-v1/;
-
+ 
 #include "msm8953.dtsi"
 #include "pm8953.dtsi"
 #include "pmi8950.dtsi"
