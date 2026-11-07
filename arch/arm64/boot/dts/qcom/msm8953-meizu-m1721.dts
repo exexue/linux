@@ -534,6 +534,8 @@
 		pm8953_l12: l12 {
 			regulator-min-microvolt = <2950000>;
 			regulator-max-microvolt = <2950000>;
+			regulator-always-on;
+			regulator-boot-on;
 		};
 
 		pm8953_l13: l13 {
