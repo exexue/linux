@@ -593,24 +593,6 @@
 	/* gpio135-138 carry MI2S for the speaker amp; only gpio0-3 stay reserved */
 	gpio-reserved-ranges = <0 4>;
 
-	/* 删除 msm8953.dtsi 中的旧定义，避免 duplicate_label */
-	/delete-node/ &sdc2_cd_on;
-	/delete-node/ &sdc2_cd_off;
-
-	/* SD card detect: gpio133, 加上拉让插拔卡产生确定的电平跳变 */
-	sdc2_cd_on: cd-on-pins {
-		pins = "gpio133";
-		function = "gpio";
-		drive-strength = <2>;
-		bias-pull-up;
-	};
-
-	sdc2_cd_off: cd-off-pins {
-		pins = "gpio133";
-		function = "gpio";
-		drive-strength = <2>;
-		bias-disable;
-	};
 
 	sec_mi2s_active: sec-mi2s-active-state {
 		pins = "gpio135", "gpio136", "gpio137", "gpio138";
