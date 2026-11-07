@@ -580,7 +580,7 @@
 	vmmc-supply = <&pm8953_l11>;
 	vqmmc-supply = <&pm8953_l12>;
 
-	cd-gpios = <&tlmm 133 GPIO_ACTIVE_HIGH>;
+	cd-gpios = <&tlmm 133 GPIO_ACTIVE_LOW>;
 
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&sdc2_clk_on &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on>;
@@ -592,6 +592,21 @@
 &tlmm {
 	/* gpio135-138 carry MI2S for the speaker amp; only gpio0-3 stay reserved */
 	gpio-reserved-ranges = <0 4>;
+
+	/* SD card detect: gpio133, needs pull-up so插拔卡产生确定的电平跳变 */
+	sdc2_cd_on: cd-on-pins {
+		pins = "gpio133";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+
+	sdc2_cd_off: cd-off-pins {
+		pins = "gpio133";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
 
 	sec_mi2s_active: sec-mi2s-active-state {
 		pins = "gpio135", "gpio136", "gpio137", "gpio138";
